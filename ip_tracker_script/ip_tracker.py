@@ -10,6 +10,7 @@ import os
 import sys
 import glob
 import ast
+import argparse
 
 
 def csv_reader(file_name, columns_to_record, encoding,
@@ -182,7 +183,7 @@ def ip_tracker(env_name, columns_to_record=['Source IP'],
     recorded_values = sum(combine_file_values, [])
 
     if not combined_file_name and debug:
-        print('INFO: No combined file detected')
+        print('INFO: No combined file detected. Creating new one.')
 
     if not combined_file_name:
         # If output file is not found, create a new file
@@ -196,28 +197,51 @@ def ip_tracker(env_name, columns_to_record=['Source IP'],
         print('INFO: No lines to be written')
 
 
-var = input().split(',')
+parser = argparse.ArgumentParser()
+parser.add_argument("-e", "--env_name")
+parser.add_argument("--combined_file")
+parser.add_argument("--environment_column")
+parser.add_argument("--encoding")
+parser.add_argument("--columns_to_record")
+parser.add_argument("--allow_duplicates")
+parser.add_argument("--debug")
+args = parser.parse_args()
 
-params = {}
-for index, value in enumerate(var):
-    if index == 0 and type(value) == str:
-        params['env_name'] = value
-    elif index == 2 and type(value) == str:
-        params['combined_file'] = value
-    elif index == 3 and type(value) == str:
-        params['environment_column'] = value
-    elif index == 5 and type(value) == str:
-        params['encoding'] = value
-    else:
-        try:
-            value = ast.literal_eval(value)
-            if index == 1 and type(value) == list:
-                params['columns_to_record'] = value
-            elif index == 4 and type(value) == bool:
-                params['allow_duplicates'] = value
-            elif index == 6 and type(value) == bool:
-                params['debug'] = value
-        except ValueError:
-            print(f'Value error for parameter {index}')
+params = {'env_name': None}
 
-ip_tracker(**params)
+if args.env_name and type(args.env_name) == str:
+    params['env_name'] = args.env_name
+if args.combined_file and type(args.combined_file) == str:
+    params['combined_file'] = args.combined_file
+if args.environment_column and type(args.environment_column) == str:
+    params['environment_column'] = args.environment_column
+if args.encoding and type(args.encoding) == str:
+    params['encoding'] = args.encoding
+if args.columns_to_record and type(args.columns_to_record) == str:
+    values = [value.strip() for value in args.columns_to_record.split(',')]
+    params['columns_to_record'] = values
+
+if args.allow_duplicates:
+    try:
+        value = ast.literal_eval(args.allow_duplicates)
+        if type(value) == bool:
+            params['allow_duplicates'] = value
+        else:
+            raise ValueError
+    except ValueError:
+        print('Value error for parameter --allow_duplicates')
+
+if args.debug:
+    try:
+        value = ast.literal_eval(args.debug)
+        if type(value) == bool:
+            params['debug'] = value
+        else:
+            raise ValueError
+    except ValueError:
+        print('Value error for parameter --debug')
+
+if params['env_name']:
+    ip_tracker(**params)
+else:
+    print('Missing required file parameter. Use -f FILE_NAME to start.')
